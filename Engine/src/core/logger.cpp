@@ -3,39 +3,31 @@
 //
 #include "spa_pch.h"
 #include "logger.h"
-#include "assert.h"
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 
 namespace Sparkle {
-    std::mutex Logger::s_mutex;
+    static std::shared_ptr<spdlog::logger> s_logger;
 
-    bool Logger::init()
-    {
+    bool Logger::init() {
+        s_logger = spdlog::stdout_color_mt("sparkle");
+        s_logger->set_pattern("[%l] %v");
+        s_logger->set_level(spdlog::level::trace);
         return true;
     }
 
-    void Logger::shutdown()
-    {
-        // no-op
+    void Logger::shutdown() {
+        spdlog::shutdown();
+    }
+    std::shared_ptr<spdlog::logger> &Logger::get_logger() {
+        return s_logger;
     }
 
-    std::string Logger::levelToString(LogLevel level)
-    {
-        switch (level) {
-            case LogLevel::Fatal: return "\x1b[1;31mFATAL\x1b[0m";  // Bold Red
-            case LogLevel::Error: return "\x1b[31mERROR\x1b[0m";    // Red
-            case LogLevel::Warn:  return "\x1b[33mWARN\x1b[0m";     // Yellow
-            case LogLevel::Info:  return "\x1b[32mINFO\x1b[0m";     // Green
-            case LogLevel::Debug: return "\x1b[36mDEBUG\x1b[0m";    // Cyan
-            case LogLevel::Trace: return "\x1b[90mTRACE\x1b[0m";    // Bright Gray
-            default:              return "UNKNOWN";
+    void report_assertion_failure(const char* expression, const char* message, const char* file, int32_t line) {
+        if (auto logger = Logger::get_logger()) {
+            logger->critical("Assertion Failure: {}: '{}' [file: {}, line: {}]", expression, message, file, line);
         }
-    }
-
-    void report_assertion_failure(const char* expression, const char* message, const char* file, i32 line) {
-        Logger::log_output(LogLevel::Fatal,
-            "Assertion Failure: {}: '{}' [file: {}, line: {}]",
-            expression, message, file, line);
     }
 }
 

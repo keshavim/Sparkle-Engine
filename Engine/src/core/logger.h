@@ -5,10 +5,7 @@
 #pragma once
 
 #include "defines.h"
-#include <string>
-#include <mutex>
-#include <iostream>
-#include <format>
+#include "spdlog/spdlog.h"
 
 #define SPA_LOG_ENABLE_WARN 1
 #define SPA_LOG_ENABLE_INFO 1
@@ -22,73 +19,39 @@
 
 
 namespace Sparkle {
-    enum class LogLevel : int {
-            Fatal = 0,
-            Error = 1,
-            Warn  = 2,
-            Info  = 3,
-            Debug = 4,
-            Trace = 5
+        class Logger {
+        public:
+            static bool init();
+            static void shutdown();
+            static std::shared_ptr<spdlog::logger>& get_logger();
+
         };
-
-    class Logger {
-    public:
-
-
-        // Initialize the logger (no-op here, but for interface completeness)
-        static bool init();
-
-        // Log output with formatting
-        template<typename... Args>
-        static void log_output(LogLevel level, const std::string& format_str, Args&&... args);
-        // Shutdown the logger (no-op here)
-        static void shutdown();
-
-    private:
-        static std::mutex s_mutex;
-
-        static std::string levelToString(LogLevel level);
-    };
-
-
-    template<typename... Args>
-    void Logger::log_output(LogLevel level, const std::string& format_str, Args&&... args)
-    {
-        std::lock_guard lock(s_mutex);
-
-        std::string message = std::vformat(format_str, std::make_format_args(std::forward<Args>(args)...));
-        std::string output = std::format("[{}] {}\n", levelToString(level), message);
-
-        std::cout << output;
-        std::cout.flush();
-    }
 
 }
 
-// Logging macros with automatic file and line
-#define SPA_LOG_FATAL(fmt, ...) ::Sparkle::Logger::log_output(::Sparkle::LogLevel::Fatal, fmt, ##__VA_ARGS__)
-#define SPA_LOG_ERROR(fmt, ...) ::Sparkle::Logger::log_output(::Sparkle::LogLevel::Error, fmt, ##__VA_ARGS__)
+#define SPA_LOG_FATAL(...) ::Sparkle::Logger::get_logger()->critical(__VA_ARGS__)
+#define SPA_LOG_ERROR(...) ::Sparkle::Logger::get_logger()->error(__VA_ARGS__)
 
 #if SPA_LOG_ENABLE_WARN == 1
-#define SPA_LOG_WARN(fmt, ...)  ::Sparkle::Logger::log_output(::Sparkle::LogLevel::Warn, fmt, ##__VA_ARGS__)
+#define SPA_LOG_WARN(...)  ::Sparkle::Logger::get_logger()->warn(__VA_ARGS__)
 #else
-#define SPA_LOG_WARN(fmt, ...)
+#define SPA_LOG_WARN(...)
 #endif
 
 #if SPA_LOG_ENABLE_INFO == 1
-#define SPA_LOG_INFO(fmt, ...)  ::Sparkle::Logger::log_output(::Sparkle::LogLevel::Info, fmt, ##__VA_ARGS__)
+#define SPA_LOG_INFO(...)  ::Sparkle::Logger::get_logger()->info(__VA_ARGS__)
 #else
-#define SPA_LOG_INFO(fmt, ...)
+#define SPA_LOG_INFO(...)
 #endif
 
 #if SPA_LOG_ENABLE_DEBUG == 1
-#define SPA_LOG_DEBUG(fmt, ...) ::Sparkle::Logger::log_output(::Sparkle::LogLevel::Debug, fmt, ##__VA_ARGS__)
+#define SPA_LOG_DEBUG(...) ::Sparkle::Logger::get_logger()->debug(__VA_ARGS__)
 #else
-#define SPA_LOG_DEBUG(fmt, ...)
+#define SPA_LOG_DEBUG(...)
 #endif
 
 #if SPA_LOG_ENABLE_TRACE == 1
-#define SPA_LOG_TRACE(fmt, ...) ::Sparkle::Logger::log_output(::Sparkle::LogLevel::Trace, fmt, ##__VA_ARGS__)
+#define SPA_LOG_TRACE(...) ::Sparkle::Logger::get_logger()->trace(__VA_ARGS__)
 #else
-#define SPA_LOG_TRACE(fmt, ...)
+#define SPA_LOG_TRACE(...)
 #endif
