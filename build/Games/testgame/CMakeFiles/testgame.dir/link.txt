@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/testgame.dir/src/main.cpp.o -o testgame  -Wl,-rpath,/home/overlord/CLionProjects/Sparkle/build/Engine/vendor/SDL ../../Engine/libengine.a ../../Engine/vendor/SDL/libSDL3.so.0.3.0 

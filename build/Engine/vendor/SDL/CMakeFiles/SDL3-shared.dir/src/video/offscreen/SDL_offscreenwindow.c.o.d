@@ -1,0 +1,25 @@
+Engine/vendor/SDL/CMakeFiles/SDL3-shared.dir/src/video/offscreen/SDL_offscreenwindow.c.o: \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/offscreen/SDL_offscreenwindow.c \
+ /usr/include/stdc-predef.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/SDL_internal.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/offscreen/../SDL_sysvideo.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/include/SDL3/SDL_vulkan.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/include/SDL3/SDL_stdinc.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/include/SDL3/SDL_error.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/include/SDL3/SDL_video.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/include/SDL3/SDL_begin_code.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/include/SDL3/SDL_close_code.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/offscreen/../SDL_surface_c.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/offscreen/../SDL_blit.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/offscreen/../../events/SDL_windowevents_c.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/offscreen/../SDL_egl_c.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/include/SDL3/SDL_egl.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/include/SDL3/SDL_platform_defines.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/khronos/EGL/egl.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/khronos/EGL/eglplatform.h \
+ /usr/include/KHR/khrplatform.h \
+ /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/khronos/EGL/eglext.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/offscreen/../SDL_sysvideo.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/offscreen/SDL_offscreenwindow.h \
+ /home/overlord/CLionProjects/Sparkle/Engine/vendor/SDL/src/video/offscreen/SDL_offscreenvideo.h
