@@ -26,6 +26,8 @@ namespace Sparkle {
         VkInstance m_instance = VK_NULL_HANDLE;
         VkAllocationCallbacks* m_allocator = nullptr;
         VkDebugUtilsMessengerEXT m_debug_messenger{};
+        VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+        VulkanDevice m_device;
     };
 
 
