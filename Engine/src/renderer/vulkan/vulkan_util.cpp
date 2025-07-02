@@ -1,11 +1,12 @@
-#pragma once
+//
+// Created by overlord on 7/1/25.
+//
+#include "spa_pch.h"
+#include "vulkan_utils.h"
+#include "core/logger.h"
 
-#include "defines.h"
-#include <vulkan/vulkan.h>
 
-namespace Sparkle {
-
-    inline const char* vk_result_to_string(VkResult result) {
+inline const char* vk_result_to_string(VkResult result) {
         switch (result) {
             case VK_SUCCESS:                                  return "VK_SUCCESS";
             case VK_NOT_READY:                                return "VK_NOT_READY";
@@ -53,4 +54,40 @@ namespace Sparkle {
         }
     }
 
-} // namespace Sparkle
+
+
+
+bool setup_validation_layers(VkInstanceCreateInfo& create_info) {
+#ifdef SPA_DEBUG
+    static const std::vector<const char*> validation_layers = {
+        "VK_LAYER_KHRONOS_validation"
+    };
+
+    uint32_t available_layer_count = 0;
+    VkResult res = vkEnumerateInstanceLayerProperties(&available_layer_count, nullptr);
+    VK_CHECK(res);
+
+    std::vector<VkLayerProperties> available_layers(available_layer_count);
+    res = vkEnumerateInstanceLayerProperties(&available_layer_count, available_layers.data());
+    VK_CHECK(res);
+
+    for (const char* required : validation_layers) {
+        const bool found = std::ranges::any_of(available_layers, [&](const VkLayerProperties& prop) {
+            return std::strcmp(prop.layerName, required) == 0;
+        });
+
+        if (!found) {
+            SPA_LOG_ERROR("Required validation layer not found: {}", required);
+            return false;
+        }
+    }
+
+    create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
+    create_info.ppEnabledLayerNames = validation_layers.data();
+#else
+    create_info.enabledLayerCount = 0;
+    create_info.ppEnabledLayerNames = nullptr;
+#endif
+
+    return true;
+}

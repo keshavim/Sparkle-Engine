@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "vulkan_utils.inl"
+#include "vulkan_utils.h"
 #include "renderer/renderer_backend.h"
 
 
@@ -25,6 +25,7 @@ namespace Sparkle {
     private:
         VkInstance m_instance = VK_NULL_HANDLE;
         VkAllocationCallbacks* m_allocator = nullptr;
+        VkDebugUtilsMessengerEXT m_debug_messenger{};
     };
 
 

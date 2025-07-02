@@ -31,6 +31,9 @@ using f64 = double;
     #define STATIC_ASSERT static_assert
 #endif
 
+#if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
+#define SPA_DEBUG
+#endif
 
 // Platform detection
 #if defined(_WIN32)

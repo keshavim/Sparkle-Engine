@@ -29,7 +29,7 @@ namespace Sparkle {
 
 #define SPA_ASSERT(expr)                                          \
     do {                                                         \
-        if (!(expr)) {                                           \
+        if (expr) {} else {                                           \
             ::Sparkle::report_assertion_failure(#expr, "", __FILE__, __LINE__); \
             SPA_DEBUG_BREAK();                                   \
         }                                                        \
@@ -37,7 +37,7 @@ namespace Sparkle {
 
 #define SPA_ASSERT_MSG(expr, message)                             \
     do {                                                         \
-        if (!(expr)) {                                           \
+        if (expr) {} else {                                           \
             ::Sparkle::report_assertion_failure(#expr, message, __FILE__, __LINE__); \
             SPA_DEBUG_BREAK();                                   \
         }                                                        \
