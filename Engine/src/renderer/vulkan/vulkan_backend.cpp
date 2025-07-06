@@ -40,13 +40,21 @@ namespace Sparkle {
         SPA_LOG_DEBUG("Vulkan debug messenger created.");
 
         bool result = SDL_Vulkan_CreateSurface(Application::GetWindow(), m_instance, m_allocator, &m_surface);
-        SPA_ASSERT(result == true);
+        SPA_ASSERT(result);
         SPA_LOG_DEBUG("Vulkan surface created");
 
+        res = m_device.create(m_instance, m_surface, m_allocator);
+        VK_CHECK(res);
+#ifdef SPA_DEBUG
+        m_device.test();  // For validation/logging
+#endif
+        SPA_LOG_DEBUG("Vulkan device created and validated.");
 
-        result = VulkanDevice::Create(&m_device, m_instance, m_surface);
-        SPA_ASSERT(result == true);
-        SPA_LOG_DEBUG("Vulkan physical and logical device created");
+        res = m_swapchain.create(m_device, m_surface, Application::GetWidth(), Application::GetHeight()); // or your window size
+        VK_CHECK(res);
+        m_swapchain.test();
+        SPA_LOG_DEBUG("Swapchain created");
+
 
 
         SPA_LOG_INFO("Vulkan renderer initialized successfully.");
@@ -55,6 +63,17 @@ namespace Sparkle {
     }
 
     void VulkanBackend::shutdown() {
+        m_swapchain.cleanup(m_device.get_logical_device());
+
+        SPA_LOG_DEBUG("Destroying Vulkan surface...");
+        if (m_surface) {
+            vkDestroySurfaceKHR(m_instance, m_surface, m_allocator);
+            m_surface = VK_NULL_HANDLE;
+        }
+
+        SPA_LOG_DEBUG("Destroying Vulkan devices...");
+        m_device.cleanup();
+
         SPA_LOG_DEBUG("Destroying Vulkan debugger...");
         if (m_debug_messenger) {
             auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
@@ -64,15 +83,6 @@ namespace Sparkle {
             }
             m_debug_messenger = VK_NULL_HANDLE;
         }
-
-        SPA_LOG_DEBUG("Destroying Vulkan surface...");
-        if (m_surface) {
-            vkDestroySurfaceKHR(m_instance, m_surface, m_allocator);
-            m_surface = VK_NULL_HANDLE;
-        }
-
-        SPA_LOG_DEBUG("Destroying Vulkan devices...");
-        m_device.Cleanup();
 
         SPA_LOG_DEBUG("Destroying Vulkan instance...");
         if (m_instance) {

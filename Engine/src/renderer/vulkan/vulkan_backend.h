@@ -28,6 +28,7 @@ namespace Sparkle {
         VkDebugUtilsMessengerEXT m_debug_messenger{};
         VkSurfaceKHR m_surface = VK_NULL_HANDLE;
         VulkanDevice m_device;
+        VulkanSwapchain m_swapchain;
     };
 
 

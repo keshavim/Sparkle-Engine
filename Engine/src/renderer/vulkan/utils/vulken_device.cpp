@@ -6,174 +6,121 @@
 #include "../vulkan_utils.h"
 
 VulkanDevice::~VulkanDevice() {
-    Cleanup();
+    if (m_device) {
+        vkDestroyDevice(m_device, m_allocator);
+    }
 }
 
-// Attempts to initialize the Vulkan device by selecting a suitable physical device.
-// The logical device is not created here — that must be done explicitly after this call.
-// Returns true if a valid physical device was selected, false otherwise.
-bool VulkanDevice::Create(VulkanDevice* out_device, VkInstance& instance, VkSurfaceKHR& surface) {
-    out_device->Cleanup();
+VkResult VulkanDevice::create(VkInstance instance, VkSurfaceKHR surface, VkAllocationCallbacks* allocator) {
+    m_instance = instance;
+    m_allocator = allocator;
 
-    if (!out_device->select_physical_device(instance, surface)) {
-        SPA_LOG_ERROR("Failed to select suitable physical device.");
-        return false;
-    }
-    if (!out_device->create_logical_device()) {
-        SPA_LOG_ERROR("Failed to create logical device.");
-        return false;
+    // Select a GPU that supports required features and presentation
+    pick_physical_device(instance, surface);
+
+    // Specify queues to create
+    float queue_priority = 1.0f;
+    std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+    std::vector<uint32_t> unique_families = {m_graphics_queue_family};
+
+    if (m_graphics_queue_family != m_present_queue_family)
+        unique_families.push_back(m_present_queue_family);
+
+    for (uint32_t family : unique_families) {
+        VkDeviceQueueCreateInfo queue_info = {VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
+        queue_info.queueFamilyIndex = family;
+        queue_info.queueCount = 1;
+        queue_info.pQueuePriorities = &queue_priority;
+        queue_create_infos.push_back(queue_info);
     }
 
-    return true;
+    // Enable swapchain extension
+    const char* device_extensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
+    VkDeviceCreateInfo create_info = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+    create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
+    create_info.pQueueCreateInfos = queue_create_infos.data();
+    create_info.enabledExtensionCount = 1;
+    create_info.ppEnabledExtensionNames = device_extensions;
+
+    VkResult result = vkCreateDevice(m_physical_device, &create_info, m_allocator, &m_device);
+    if (result != VK_SUCCESS) return result;
+
+    // Retrieve queues
+    vkGetDeviceQueue(m_device, m_graphics_queue_family, 0, &m_graphics_queue);
+    vkGetDeviceQueue(m_device, m_present_queue_family, 0, &m_present_queue);
+
+    return VK_SUCCESS;
 }
 
-void VulkanDevice::Cleanup() {
-    if (logical_device_ != VK_NULL_HANDLE) {
-        vkDeviceWaitIdle(logical_device_);
-        vkDestroyDevice(logical_device_, nullptr);
-        logical_device_ = VK_NULL_HANDLE;
-    }
+void VulkanDevice::pick_physical_device(VkInstance instance, VkSurfaceKHR surface) {
+    uint32_t device_count = 0;
+    vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
+    assert(device_count > 0 && "No Vulkan-compatible devices found!");
 
-    graphicsQueue_ = VK_NULL_HANDLE;
-    presentQueue_ = VK_NULL_HANDLE;
-    physicalDeviceInfo_ = {};
-    swapchainSupport_ = {};
-}
-
-// Creates a Vulkan logical device using the selected physical device.
-// Sets up the graphics and present queues based on previously discovered indices.
-// Also enables required extensions (e.g., swapchain).
-// Returns true on success.
-bool VulkanDevice::create_logical_device() {
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::unordered_set<u32> uniqueQueueIndices = {
-        physicalDeviceInfo_.graphicsQueueIndex,
-        physicalDeviceInfo_.presentQueueIndex
-    };
-
-    float queuePriority = 1.0f;
-    for (u32 index : uniqueQueueIndices) {
-        VkDeviceQueueCreateInfo queueCreateInfo{};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = index;
-        queueCreateInfo.queueCount = 1;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
-        queueCreateInfos.push_back(queueCreateInfo);
-    }
-
-    VkPhysicalDeviceFeatures deviceFeatures{};
-
-    VkDeviceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.queueCreateInfoCount = static_cast<u32>(queueCreateInfos.size());
-    createInfo.pQueueCreateInfos = queueCreateInfos.data();
-    createInfo.pEnabledFeatures = &deviceFeatures;
-
-    std::vector<const char*> requiredExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
-    createInfo.enabledExtensionCount = static_cast<u32>(requiredExtensions.size());
-    createInfo.ppEnabledExtensionNames = requiredExtensions.data();
-
-    if (vkCreateDevice(physicalDeviceInfo_.physicalDevice, &createInfo, nullptr, &logical_device_) != VK_SUCCESS) {
-        SPA_LOG_ERROR("Failed to create logical device.");
-        return false;
-    }
-
-    vkGetDeviceQueue(logical_device_, physicalDeviceInfo_.graphicsQueueIndex, 0, &graphicsQueue_);
-    vkGetDeviceQueue(logical_device_, physicalDeviceInfo_.presentQueueIndex, 0, &presentQueue_);
-
-    return true;
-}
-
-// Queries the given physical device for its surface capabilities, supported formats,
-// and present modes on the provided surface. Stores the results for later use.
-// Returns true if formats and present modes are available, false otherwise.
-bool VulkanDevice::query_swapchain_support(VkPhysicalDevice device, VkSurfaceKHR surface) {
-    VulkanSwapchainSupportInfo& info = swapchainSupport_;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &info.capabilities);
-
-    uint32_t formatCount = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-    if (formatCount > 0) {
-        info.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, info.formats.data());
-    }
-
-    uint32_t presentModeCount = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-    if (presentModeCount > 0) {
-        info.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, info.presentModes.data());
-    }
-
-    return !info.formats.empty() && !info.presentModes.empty();
-}
-
-// Enumerates available physical devices and selects the first suitable one
-// based on graphics/present queue availability and swapchain support.
-// Populates internal physical device information upon success.
-bool VulkanDevice::select_physical_device(VkInstance instance, VkSurfaceKHR surface) {
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-    if (deviceCount == 0) {
-        SPA_LOG_ERROR("No physical devices with Vulkan support found.");
-        return false;
-    }
-
-    std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+    std::vector<VkPhysicalDevice> devices(device_count);
+    vkEnumeratePhysicalDevices(instance, &device_count, devices.data());
 
     for (const auto& device : devices) {
-        if (check_device_suitability(device, surface)) {
-            physicalDeviceInfo_.physicalDevice = device;
-            return true;
+        if (is_device_suitable(device, surface)) {
+            m_physical_device = device;
+            return;
         }
     }
 
-    return false;
+    assert(false && "Failed to find a suitable GPU!");
 }
 
-// Determines if the specified physical device meets the requirements
-// for rendering, presentation, and swapchain support.
-// Stores queue indices and other relevant properties if the device is valid.
-bool VulkanDevice::check_device_suitability(VkPhysicalDevice device, VkSurfaceKHR surface) {
-    if (device == VK_NULL_HANDLE) return false;
+bool VulkanDevice::is_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+    find_queue_families(device, surface);
+    return m_graphics_queue_family != UINT32_MAX && m_present_queue_family != UINT32_MAX;
+}
 
-    vkGetPhysicalDeviceProperties(device, &physicalDeviceInfo_.properties);
-    vkGetPhysicalDeviceFeatures(device, &physicalDeviceInfo_.features);
-    vkGetPhysicalDeviceMemoryProperties(device, &physicalDeviceInfo_.memoryProperties);
+void VulkanDevice::find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface) {
+    uint32_t queue_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_count, nullptr);
+    std::vector<VkQueueFamilyProperties> properties(queue_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_count, properties.data());
 
-    if (!query_swapchain_support(device, surface)) {
-        return false;
+    for (uint32_t i = 0; i < queue_count; ++i) {
+        if (properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            m_graphics_queue_family = i;
+
+        VkBool32 present_support = VK_FALSE;
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &present_support);
+        if (present_support)
+            m_present_queue_family = i;
+
+        if (m_graphics_queue_family != UINT32_MAX && m_present_queue_family != UINT32_MAX)
+            return;
     }
+}
 
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-    if (queueFamilyCount == 0) return false;
-
-    physicalDeviceInfo_.queueFamilies.resize(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, physicalDeviceInfo_.queueFamilies.data());
-
-    bool graphicsFound = false;
-    bool presentFound = false;
-
-    for (uint32_t i = 0; i < queueFamilyCount; ++i) {
-        if (physicalDeviceInfo_.queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            physicalDeviceInfo_.graphicsQueueIndex = i;
-            graphicsFound = true;
-        }
-
-        VkBool32 presentSupport = VK_FALSE;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-        if (presentSupport) {
-            physicalDeviceInfo_.presentQueueIndex = i;
-            presentFound = true;
-        }
-
-        if (graphicsFound && presentFound) break;
+void VulkanDevice::cleanup() {
+    if (m_device != VK_NULL_HANDLE) {
+        vkDestroyDevice(m_device, m_allocator);
+        m_device = VK_NULL_HANDLE;
     }
+    m_physical_device = VK_NULL_HANDLE;
+    m_graphics_queue = VK_NULL_HANDLE;
+    m_present_queue = VK_NULL_HANDLE;
+    m_graphics_queue_family = UINT32_MAX;
+    m_present_queue_family = UINT32_MAX;
+}
 
-    return graphicsFound && presentFound;
+
+void VulkanDevice::test() const {
+    assert(m_physical_device && "Device not initialized!");
+
+    VkPhysicalDeviceProperties props{};
+    vkGetPhysicalDeviceProperties(m_physical_device, &props);
+
+    std::cout << "Selected GPU: " << props.deviceName << "\n";
+    std::cout << "API Version: "
+              << VK_VERSION_MAJOR(props.apiVersion) << "."
+              << VK_VERSION_MINOR(props.apiVersion) << "."
+              << VK_VERSION_PATCH(props.apiVersion) << "\n";
+
+    std::cout << "Graphics Queue Family Index: " << m_graphics_queue_family << "\n";
+    std::cout << "Present Queue Family Index: " << m_present_queue_family << "\n";
 }
