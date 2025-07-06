@@ -52,29 +52,82 @@ private:
 };
 
 
+// Encapsulates color + depth image views used by the swapchain
+class VulkanImageViews {
+public:
+    VulkanImageViews() = default;
+    ~VulkanImageViews();
+
+    // Creates image views for swapchain images + depth image/view
+    VkResult create(VulkanDevice& device, const std::vector<VkImage>& images, VkFormat color_format, VkExtent2D extent);
+    void cleanup(VkDevice device);
+
+    const std::vector<VkImageView>& get_color_views() const { return m_color_views; }
+    VkImageView get_depth_view() const { return m_depth_view; }
+    VkFormat get_depth_format() const { return m_depth_format; }
+
+private:
+    // Swapchain image views
+    std::vector<VkImageView> m_color_views;
+
+    // Depth buffer
+    VkImage m_depth_image = VK_NULL_HANDLE;
+    VkDeviceMemory m_depth_memory = VK_NULL_HANDLE;
+    VkImageView m_depth_view = VK_NULL_HANDLE;
+    VkFormat m_depth_format{};
+
+    VkFormat choose_depth_format(VkPhysicalDevice phys);
+};
+
+
+// Encapsulates a Vulkan render pass that supports one color and one depth attachment
+class VulkanRenderPass {
+public:
+    VulkanRenderPass() = default;
+    ~VulkanRenderPass();
+
+    // Create a render pass with given color + depth formats
+    VkResult create(VkDevice device, VkFormat color_format, VkFormat depth_format);
+    void cleanup(VkDevice device);
+
+    VkRenderPass get() const { return m_render_pass; }
+
+private:
+    VkRenderPass m_render_pass = VK_NULL_HANDLE;
+};
+
 
 class VulkanSwapchain {
 public:
     VulkanSwapchain() = default;
     ~VulkanSwapchain();
 
-    // Create swapchain and image views
+    // Create or recreate the swapchain and all associated views, render pass, and framebuffers
     VkResult create(VulkanDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height);
-
+    VkResult recreate(VulkanDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height);
     void cleanup(VkDevice device);
 
     void test() const;
 
     // Accessors
     VkSwapchainKHR get_swapchain() const { return m_swapchain; }
-    const std::vector<VkImageView>& get_image_views() const { return m_image_views; }
-    VkFormat get_format() const { return m_image_format; }
     VkExtent2D get_extent() const { return m_extent; }
+    VkFormat get_image_format() const { return m_image_format; }
+    VkRenderPass get_render_pass() const { return m_render_pass.get(); }
+    const std::vector<VkFramebuffer>& get_framebuffers() const { return m_framebuffers; }
 
 private:
     VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
     std::vector<VkImage> m_images;
-    std::vector<VkImageView> m_image_views;
+    std::vector<VkFramebuffer> m_framebuffers;
+
     VkFormat m_image_format{};
     VkExtent2D m_extent{};
+
+    VulkanImageViews m_image_views;
+    VulkanRenderPass m_render_pass;
+
+    VkSurfaceFormatKHR choose_surface_format(const std::vector<VkSurfaceFormatKHR>& formats);
+    VkPresentModeKHR choose_present_mode(const std::vector<VkPresentModeKHR>& modes);
+    VkExtent2D choose_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
 };

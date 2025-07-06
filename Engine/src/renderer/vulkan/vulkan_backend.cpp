@@ -50,10 +50,18 @@ namespace Sparkle {
 #endif
         SPA_LOG_DEBUG("Vulkan device created and validated.");
 
-        res = m_swapchain.create(m_device, m_surface, Application::GetWidth(), Application::GetHeight()); // or your window size
-        VK_CHECK(res);
+        // Create the swapchain (including views, render pass, depth, and framebuffers)
+        res = m_swapchain.create(m_device, m_surface,
+                                 Application::GetWidth(),
+                                 Application::GetHeight());
+        SPA_ASSERT(res == VK_SUCCESS);
+#ifdef SPA_DEBUG
+         // Test all the internal components for correctness
         m_swapchain.test();
-        SPA_LOG_DEBUG("Swapchain created");
+#endif
+        SPA_LOG_DEBUG("Swapchain created.");
+
+
 
 
 
@@ -63,16 +71,18 @@ namespace Sparkle {
     }
 
     void VulkanBackend::shutdown() {
+        SPA_LOG_DEBUG("Destroying swapchain devices...");
         m_swapchain.cleanup(m_device.get_logical_device());
 
+        SPA_LOG_DEBUG("Destroying Vulkan devices...");
+        m_device.cleanup();
         SPA_LOG_DEBUG("Destroying Vulkan surface...");
         if (m_surface) {
             vkDestroySurfaceKHR(m_instance, m_surface, m_allocator);
             m_surface = VK_NULL_HANDLE;
         }
 
-        SPA_LOG_DEBUG("Destroying Vulkan devices...");
-        m_device.cleanup();
+
 
         SPA_LOG_DEBUG("Destroying Vulkan debugger...");
         if (m_debug_messenger) {
