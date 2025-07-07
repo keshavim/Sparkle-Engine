@@ -194,6 +194,7 @@ public:
     const std::vector<VkFramebuffer>& get_framebuffers() const { return m_framebuffers.get_all(); }
     const std::vector<VkCommandBuffer>& get_command_buffers() const { return m_command_pool.get_buffers(); }
 
+
 private:
     // Helper methods to pick best formats and present mode
     VkSurfaceFormatKHR choose_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);

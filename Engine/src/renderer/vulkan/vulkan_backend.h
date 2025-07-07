@@ -22,6 +22,7 @@ namespace Sparkle {
         bool begin_frame() override;
         bool end_frame() override;
 
+
     private:
         VkInstance m_instance = VK_NULL_HANDLE;
         VkAllocationCallbacks* m_allocator = nullptr;
@@ -30,10 +31,6 @@ namespace Sparkle {
         VulkanDevice m_device;
         VulkanSwapchain m_swapchain;
         VulkanSyncObjects m_sync_objects;
-
-        uint32_t m_max_frames_in_flight = 2;
-        uint32_t m_current_frame = 0;
-        uint32_t m_current_image_index = 0;
     };
 
 

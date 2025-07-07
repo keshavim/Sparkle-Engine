@@ -126,7 +126,7 @@ VkResult VulkanSwapchain::create(VulkanDevice& device, VkSurfaceKHR surface, uin
 
     // 12. Record command buffers (render pass begin/end with clear values)
     VkClearValue clear_color{};
-    clear_color.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    clear_color.color = { {1.0f, 0.0f, 0.0f, 1.0f} };
 
     VkClearValue clear_depth{};
     clear_depth.depthStencil = {1.0f, 0};
@@ -198,4 +198,7 @@ VkExtent2D VulkanSwapchain::choose_extent(const VkSurfaceCapabilitiesKHR& capabi
         actual_extent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actual_extent.height));
         return actual_extent;
     }
+
+
+
 }

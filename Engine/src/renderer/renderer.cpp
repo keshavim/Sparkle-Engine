@@ -13,7 +13,6 @@ namespace Sparkle {
 
     bool Renderer::initialize() {
         s_backend = std::make_unique<VulkanBackend>();
-        s_backend->m_frame_number = 0;
 
         if (!s_backend->init()) {
             SPA_LOG_FATAL("Renderer backend failed to initialize. Shutting down.");
@@ -36,12 +35,12 @@ namespace Sparkle {
 
     bool Renderer::end_frame(float delta_time) {
         bool result = s_backend->end_frame();
-        s_backend->m_frame_number++;
         return result;
     }
 
     bool Renderer::draw_frame(RenderPacket* packet) {
         if (begin_frame(packet->deltaTime)) {
+
             bool result = end_frame(packet->deltaTime);
             if (!result) {
                 SPA_LOG_ERROR("renderer_end_frame failed. Application shutting down...");

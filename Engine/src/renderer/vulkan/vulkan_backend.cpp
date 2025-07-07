@@ -73,6 +73,9 @@ namespace Sparkle {
     }
 
     void VulkanBackend::shutdown() {
+        SPA_LOG_DEBUG("Waiting for device to be idle...");
+        vkDeviceWaitIdle(m_device.get_logical_device());  // ✅ ADD THIS
+
         SPA_LOG_DEBUG("Destroying sync objects...");
         m_sync_objects.cleanup(m_device.get_logical_device());
 
@@ -81,6 +84,7 @@ namespace Sparkle {
 
         SPA_LOG_DEBUG("Destroying Vulkan devices...");
         m_device.cleanup();
+
         SPA_LOG_DEBUG("Destroying Vulkan surface...");
         if (m_surface) {
             vkDestroySurfaceKHR(m_instance, m_surface, m_allocator);
@@ -115,12 +119,92 @@ void VulkanBackend::resize(uint32_t width, uint32_t height) {
     m_current_frame = 0;
 }
 
-bool VulkanBackend::begin_frame() {
+    bool VulkanBackend::begin_frame() {
+        VkDevice device = m_device.get_logical_device();
+
+        // Wait on the in-flight fence for the current frame to ensure the previous frame has finished
+        VkFence in_flight_fence = m_sync_objects.get_in_flight_fence(m_current_frame);
+        vkWaitForFences(device, 1, &in_flight_fence, VK_TRUE, UINT64_MAX);
+        vkResetFences(device, 1, &in_flight_fence);
+
+        // Acquire next image from the swapchain
+        VkResult result = vkAcquireNextImageKHR(
+            device,
+            m_swapchain.get_swapchain(),
+            UINT64_MAX,
+            m_sync_objects.get_image_available_semaphore(m_current_frame),
+            VK_NULL_HANDLE,
+            &m_current_image_index
+        );
+
+        if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+            resize(m_swapchain.get_extent().width, m_swapchain.get_extent().height);  // trigger recreate
+            return false;
+        }
+        if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+            SPA_LOG_ERROR("Failed to acquire swapchain image:");
+            printf("\b%d\n", result);
+            return false;
+        }
+
+        return true;
+    }
+
+
+bool VulkanBackend::end_frame() {
+    VkDevice device = m_device.get_logical_device();
+
+    VkSemaphore wait_semaphores[] = { m_sync_objects.get_image_available_semaphore(m_current_frame) };
+    VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSemaphore signal_semaphores[] = { m_sync_objects.get_render_finished_semaphore(m_current_frame) };
+
+    VkCommandBuffer command_buffer = m_swapchain.get_command_buffers()[m_current_image_index];
+
+    // Submit command buffer
+    VkSubmitInfo submit_info = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = wait_semaphores;
+    submit_info.pWaitDstStageMask = wait_stages;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = signal_semaphores;
+
+    VkFence in_flight_fence = m_sync_objects.get_in_flight_fence(m_current_frame);
+    if (vkQueueSubmit(m_device.get_graphics_queue(), 1, &submit_info, in_flight_fence) != VK_SUCCESS) {
+        SPA_LOG_ERROR("Failed to submit draw command buffer.");
+        return false;
+    }
+
+    // Present the rendered image to the screen
+    VkPresentInfoKHR present_info = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = signal_semaphores;
+
+    VkSwapchainKHR swapchains[] = { m_swapchain.get_swapchain() };
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = swapchains;
+    present_info.pImageIndices = &m_current_image_index;
+    present_info.pResults = nullptr;
+
+    VkResult result = vkQueuePresentKHR(m_device.get_present_queue(), &present_info);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        resize(m_swapchain.get_extent().width, m_swapchain.get_extent().height);
+        return false;
+    }
+    if (result != VK_SUCCESS) {
+        SPA_LOG_ERROR("Failed to present swapchain image: ");
+        printf("\b%d\n", result);
+
+        return false;
+    }
+
+        m_frame_number++;
+    // Advance to next frame in flight
+    m_current_frame = (m_current_frame + 1) % m_max_frames_in_flight;
     return true;
 }
 
-bool VulkanBackend::end_frame() {
-    return true;
-}
 }
 

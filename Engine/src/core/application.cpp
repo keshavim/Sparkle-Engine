@@ -17,9 +17,6 @@ namespace Sparkle {
         }
 
         SPA_ASSERT(m_game_inst->init());
-
-
-
         m_window = SDL_CreateWindow(
             m_game_inst->config.title,
             m_game_inst->config.width,
@@ -32,7 +29,10 @@ namespace Sparkle {
             return false;
         }
 
-        Renderer::initialize();
+        if (!Renderer::initialize()) {
+            SPA_LOG_ERROR("Renderer failed to initialize.");
+            return false;
+        }
 
 
         m_running = true;
@@ -59,6 +59,7 @@ namespace Sparkle {
         u64 freq = SDL_GetPerformanceFrequency();
 
         RenderPacket packet;
+        packet.clearColor = { {0.0f, 1.0f, 0.0f, 1.0f} }; // green clear
 
         while (m_running) {
             SDL_Event event;
@@ -77,13 +78,15 @@ namespace Sparkle {
                     SPA_LOG_ERROR("Failed to update");
                     m_running = false;
                 }
-                if(!m_game_inst->render()) {
-                    SPA_LOG_ERROR("Failed to render");
-                    m_running = false;
-                }
 
                 packet.deltaTime = delta_time;
-                Renderer::draw_frame(&packet);
+
+                if (Renderer::draw_frame(&packet)) {
+                    if (!m_game_inst->render()) {
+                        SPA_LOG_ERROR("Failed to render");
+                        m_running = false;
+                    }
+                }
 
 
             }
