@@ -61,8 +61,10 @@ namespace Sparkle {
 #endif
         SPA_LOG_DEBUG("Swapchain created.");
 
-
-
+        // Create sync objects
+        res = m_sync_objects.create(m_device.get_logical_device(), m_max_frames_in_flight);
+        if (res != VK_SUCCESS) return res;
+        SPA_LOG_DEBUG("sync objects created.");
 
 
         SPA_LOG_INFO("Vulkan renderer initialized successfully.");
@@ -71,7 +73,10 @@ namespace Sparkle {
     }
 
     void VulkanBackend::shutdown() {
-        SPA_LOG_DEBUG("Destroying swapchain devices...");
+        SPA_LOG_DEBUG("Destroying sync objects...");
+        m_sync_objects.cleanup(m_device.get_logical_device());
+
+        SPA_LOG_DEBUG("Destroying swapchain...");
         m_swapchain.cleanup(m_device.get_logical_device());
 
         SPA_LOG_DEBUG("Destroying Vulkan devices...");
@@ -81,8 +86,6 @@ namespace Sparkle {
             vkDestroySurfaceKHR(m_instance, m_surface, m_allocator);
             m_surface = VK_NULL_HANDLE;
         }
-
-
 
         SPA_LOG_DEBUG("Destroying Vulkan debugger...");
         if (m_debug_messenger) {
@@ -101,16 +104,23 @@ namespace Sparkle {
         }
     }
 
+void VulkanBackend::resize(uint32_t width, uint32_t height) {
+    // Wait for the device to be idle before resizing
+    vkDeviceWaitIdle(m_device.get_logical_device());
 
-    void VulkanBackend::resize(uint32_t width, uint32_t height) {
-    }
+    // Recreate swapchain with new dimensions
+    m_swapchain.recreate(m_device, m_surface, width, height);
 
-    bool VulkanBackend::begin_frame() {
-        return true;
-    }
+    // Reset frame index if needed
+    m_current_frame = 0;
+}
 
-    bool VulkanBackend::end_frame() {
-        return true;
-    }
+bool VulkanBackend::begin_frame() {
+    return true;
+}
+
+bool VulkanBackend::end_frame() {
+    return true;
+}
 }
 

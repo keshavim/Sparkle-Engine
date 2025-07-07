@@ -1,6 +1,7 @@
 //
 // Created by overlord on 7/6/25.
 //
+#include "spa_pch.h"
 #include "../vulkan_utils.h"
 
 VulkanImageViews::~VulkanImageViews() {
@@ -114,4 +115,16 @@ VkResult VulkanImageViews::create(VulkanDevice& device, const std::vector<VkImag
     view_info.subresourceRange.layerCount = 1;
 
     return vkCreateImageView(device.get_logical_device(), &view_info, nullptr, &m_depth_view);
+}
+
+void VulkanImageViews::test() const {
+    std::cout << "=== VulkanImageViews Test ===\n";
+    std::cout << "Color Image Views: " << m_color_views.size() << "\n";
+    for (size_t i = 0; i < m_color_views.size(); ++i) {
+        std::cout << "  Color View #" << i << ": " << m_color_views[i] << "\n";
+    }
+    std::cout << "Depth Image: " << m_depth_image << "\n";
+    std::cout << "Depth Memory: " << m_depth_memory << "\n";
+    std::cout << "Depth View: " << m_depth_view << "\n";
+    std::cout << "Depth Format: " << m_depth_format << "\n";
 }

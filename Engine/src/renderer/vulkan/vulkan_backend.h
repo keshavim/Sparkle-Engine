@@ -29,6 +29,11 @@ namespace Sparkle {
         VkSurfaceKHR m_surface = VK_NULL_HANDLE;
         VulkanDevice m_device;
         VulkanSwapchain m_swapchain;
+        VulkanSyncObjects m_sync_objects;
+
+        uint32_t m_max_frames_in_flight = 2;
+        uint32_t m_current_frame = 0;
+        uint32_t m_current_image_index = 0;
     };
 
 

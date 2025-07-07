@@ -60,6 +60,9 @@ public:
 
     // Creates image views for swapchain images + depth image/view
     VkResult create(VulkanDevice& device, const std::vector<VkImage>& images, VkFormat color_format, VkExtent2D extent);
+
+    void test() const;
+
     void cleanup(VkDevice device);
 
     const std::vector<VkImageView>& get_color_views() const { return m_color_views; }
@@ -97,37 +100,143 @@ private:
 };
 
 
+// Manages Vulkan framebuffers for each swapchain image view
+class VulkanFramebufferManager {
+public:
+    VulkanFramebufferManager() = default;
+    ~VulkanFramebufferManager();
+
+    // Create one framebuffer per swapchain image
+    VkResult create(VkDevice device,
+                    const std::vector<VkImageView>& color_views,
+                    VkImageView depth_view,
+                    VkRenderPass render_pass,
+                    VkExtent2D extent);
+
+    // Destroy all framebuffers
+    void cleanup(VkDevice device);
+
+    // Accessor
+    const std::vector<VkFramebuffer>& get_all() const { return m_framebuffers; }
+
+    // Print test info
+    void test() const;
+
+private:
+    std::vector<VkFramebuffer> m_framebuffers;
+};
+
+
+// Manages a command pool and command buffers for rendering
+class VulkanCommandPool {
+public:
+    VulkanCommandPool() = default;
+    ~VulkanCommandPool();
+
+    // Create the command pool for a specific queue family
+    VkResult create(VkDevice device, uint32_t queue_family_index);
+
+    // Allocate primary command buffers
+    VkResult allocate_buffers(VkDevice device, uint32_t count);
+
+    // Free and destroy all Vulkan resources
+    void cleanup(VkDevice device);
+
+    std::vector<VkCommandBuffer>& get_buffers_mut() { return m_command_buffers; }
+    const std::vector<VkCommandBuffer>& get_buffers() const { return m_command_buffers; }
+
+    // Test output
+    void test() const;
+
+private:
+    VkCommandPool m_pool = VK_NULL_HANDLE;
+    std::vector<VkCommandBuffer> m_command_buffers;
+};
+
+
+// Records simple render pass commands into command buffers
+class VulkanCommandRecorder {
+public:
+    VulkanCommandRecorder() = default;
+
+    // Record commands for each framebuffer
+    void record_all(const std::vector<VkCommandBuffer>& command_buffers,
+                    VkRenderPass render_pass,
+                    const std::vector<VkFramebuffer>& framebuffers,
+                    VkExtent2D extent,
+                    VkClearValue clear_color,
+                    VkClearValue clear_depth);
+};
+
+
+
+
 class VulkanSwapchain {
 public:
     VulkanSwapchain() = default;
     ~VulkanSwapchain();
 
-    // Create or recreate the swapchain and all associated views, render pass, and framebuffers
+    // Create swapchain + all related resources
     VkResult create(VulkanDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height);
-    VkResult recreate(VulkanDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height);
+
+    // Recreate swapchain on resize or other changes
+    void recreate(VulkanDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height);
+
+    // Cleanup all Vulkan resources related to swapchain
     void cleanup(VkDevice device);
 
+    // Run test printout of swapchain and related resources info
     void test() const;
 
-    // Accessors
     VkSwapchainKHR get_swapchain() const { return m_swapchain; }
     VkExtent2D get_extent() const { return m_extent; }
-    VkFormat get_image_format() const { return m_image_format; }
     VkRenderPass get_render_pass() const { return m_render_pass.get(); }
-    const std::vector<VkFramebuffer>& get_framebuffers() const { return m_framebuffers; }
+    const std::vector<VkFramebuffer>& get_framebuffers() const { return m_framebuffers.get_all(); }
+    const std::vector<VkCommandBuffer>& get_command_buffers() const { return m_command_pool.get_buffers(); }
+
+private:
+    // Helper methods to pick best formats and present mode
+    VkSurfaceFormatKHR choose_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
+    VkPresentModeKHR choose_present_mode(const std::vector<VkPresentModeKHR>& available_modes);
+    VkExtent2D choose_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
 
 private:
     VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
-    std::vector<VkImage> m_images;
-    std::vector<VkFramebuffer> m_framebuffers;
+    VkFormat m_format = VK_FORMAT_UNDEFINED;
+    VkExtent2D m_extent = {};
 
-    VkFormat m_image_format{};
-    VkExtent2D m_extent{};
+    std::vector<VkImage> m_images;
 
     VulkanImageViews m_image_views;
     VulkanRenderPass m_render_pass;
+    VulkanFramebufferManager m_framebuffers;
+    VulkanCommandPool m_command_pool;
+    VulkanCommandRecorder m_recorder;
+};
 
-    VkSurfaceFormatKHR choose_surface_format(const std::vector<VkSurfaceFormatKHR>& formats);
-    VkPresentModeKHR choose_present_mode(const std::vector<VkPresentModeKHR>& modes);
-    VkExtent2D choose_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
+class VulkanSyncObjects {
+public:
+    VulkanSyncObjects() = default;
+    ~VulkanSyncObjects();
+
+    // Create semaphores and fences for the given number of frames in flight
+    VkResult create(VkDevice device, uint32_t max_frames_in_flight);
+
+    // Clean up all synchronization objects
+    void cleanup(VkDevice device);
+
+    // Accessors
+    VkSemaphore get_image_available_semaphore(uint32_t index) const { return m_image_available_semaphores[index]; }
+    VkSemaphore get_render_finished_semaphore(uint32_t index) const { return m_render_finished_semaphores[index]; }
+    VkFence get_in_flight_fence(uint32_t index) const { return m_in_flight_fences[index]; }
+
+    uint32_t get_max_frames_in_flight() const { return static_cast<uint32_t>(m_in_flight_fences.size()); }
+
+    // Test output to validate creation
+    void test() const;
+
+private:
+    std::vector<VkSemaphore> m_image_available_semaphores;
+    std::vector<VkSemaphore> m_render_finished_semaphores;
+    std::vector<VkFence> m_in_flight_fences;
 };
