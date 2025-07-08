@@ -29,19 +29,19 @@ namespace Sparkle {
         }
     }
 
-    bool Renderer::begin_frame(float delta_time) {
-        return s_backend->begin_frame();
+    bool Renderer::begin_frame(RenderPacket* packet) {
+        return s_backend->begin_frame(packet);
     }
 
-    bool Renderer::end_frame(float delta_time) {
-        bool result = s_backend->end_frame();
+    bool Renderer::end_frame(RenderPacket* packet) {
+        bool result = s_backend->end_frame(packet);
         return result;
     }
 
     bool Renderer::draw_frame(RenderPacket* packet) {
-        if (begin_frame(packet->deltaTime)) {
+        if (begin_frame(packet)) {
 
-            bool result = end_frame(packet->deltaTime);
+            bool result = end_frame(packet);
             if (!result) {
                 SPA_LOG_ERROR("renderer_end_frame failed. Application shutting down...");
                 return false;

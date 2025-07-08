@@ -7,7 +7,8 @@
 #include "window.h"
 #include "../game_type.h"
 #include <SDL3/SDL.h>
-
+#include "input.h"
+#include "Time.h"
 namespace Sparkle {
     class Application {
     public:

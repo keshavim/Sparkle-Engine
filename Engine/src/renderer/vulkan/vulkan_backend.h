@@ -19,8 +19,13 @@ namespace Sparkle {
         void shutdown() override;
         void resize(uint32_t width, uint32_t height) override;
 
-        bool begin_frame() override;
-        bool end_frame() override;
+        bool begin_frame(const RenderPacket* packet) override;
+        bool end_frame(const RenderPacket* packet) override;
+
+        void set_clear_color(const RenderPacket* packet) {
+            const float* cc = packet->clearColor;
+            m_swapchain.set_clear_color(cc[0], cc[1], cc[2], cc[3]);
+        }
 
 
     private:

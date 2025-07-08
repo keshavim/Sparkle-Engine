@@ -55,31 +55,35 @@ namespace Sparkle {
     }
 
     void Application::_internal_run() {
-        u64 last_ticks = SDL_GetPerformanceCounter();
-        u64 freq = SDL_GetPerformanceFrequency();
 
-        RenderPacket packet;
-        packet.clearColor = { {0.0f, 1.0f, 0.0f, 1.0f} }; // green clear
+
+        RenderPacket packet = {.clearColor = {0.0f, 0.0f, 1.0f, 1.0f}};
+
 
         while (m_running) {
+            Time::tick();
+
+            Input::begin_frame();
+
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
+                Input::process_event(event);
                 if (event.type == SDL_EVENT_QUIT) {
                     m_running = false;
                 }
             }
-            const u64 current_ticks = SDL_GetPerformanceCounter();
-            const f32 delta_time = static_cast<f32>(current_ticks - last_ticks) / static_cast<f32>(freq);
-            last_ticks = current_ticks;
 
 
             if (!m_suspended) {
-                if(!m_game_inst->update(delta_time)) {
+                const f32 dt = Time::delta_time();
+                if(!m_game_inst->update(dt)) {
                     SPA_LOG_ERROR("Failed to update");
                     m_running = false;
                 }
 
-                packet.deltaTime = delta_time;
+                packet.deltaTime = dt;
+                Renderer::get_backend()->set_clear_color(&packet);
+
 
                 if (Renderer::draw_frame(&packet)) {
                     if (!m_game_inst->render()) {

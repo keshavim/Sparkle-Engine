@@ -188,6 +188,8 @@ public:
     // Run test printout of swapchain and related resources info
     void test() const;
 
+    void set_clear_color(float r, float g, float b, float a);
+
     VkSwapchainKHR get_swapchain() const { return m_swapchain; }
     VkExtent2D get_extent() const { return m_extent; }
     VkRenderPass get_render_pass() const { return m_render_pass.get(); }

@@ -125,8 +125,14 @@ VkResult VulkanSwapchain::create(VulkanDevice& device, VkSurfaceKHR surface, uin
     }
 
     // 12. Record command buffers (render pass begin/end with clear values)
+    set_clear_color(1.0f, 1.f, 0.f, 0.f);
+
+    return VK_SUCCESS;
+}
+
+void VulkanSwapchain::set_clear_color(float r, float g, float b, float a) {
     VkClearValue clear_color{};
-    clear_color.color = { {1.0f, 0.0f, 0.0f, 1.0f} };
+    clear_color.color = { {r,g,b,a} };
 
     VkClearValue clear_depth{};
     clear_depth.depthStencil = {1.0f, 0};
@@ -138,7 +144,6 @@ VkResult VulkanSwapchain::create(VulkanDevice& device, VkSurfaceKHR surface, uin
                           clear_color,
                           clear_depth);
 
-    return VK_SUCCESS;
 }
 
 void VulkanSwapchain::recreate(VulkanDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height) {

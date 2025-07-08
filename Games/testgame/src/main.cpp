@@ -1,13 +1,14 @@
 #include <Sparkle.h>
 
+using namespace Sparkle;
 
-class TestGame : public Sparkle::Game {
+class TestGame : public Game {
 public:
     TestGame() = default;
     ~TestGame() override = default;
 
     bool init() override {
-        config.flags |= Sparkle::WindowFlags::Vulkan | Sparkle::WindowFlags::Resizable;
+        config.flags |= WindowFlags::Vulkan | WindowFlags::Resizable;
         SPA_LOG_INFO("TestGame init");
         return true;
     }
@@ -17,6 +18,13 @@ public:
     }
 
     bool update(float delta_time) override {
+        if (Input::key_pressed(Key::SPACE)) {
+            SPA_LOG_INFO("Jump!");
+        }
+
+        if (Input::key_down(Key::A)) {
+            SPA_LOG_INFO("A");
+        }
         return true;
     }
 
@@ -26,6 +34,6 @@ public:
 
 };
 
-Sparkle::Game *createGame() {
+Game *createGame() {
     return new TestGame;
 }

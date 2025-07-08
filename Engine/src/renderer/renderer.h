@@ -19,8 +19,8 @@ namespace Sparkle {
         static RenderBackend* get_backend() { return s_backend.get(); }
 
     private:
-        static bool begin_frame(float delta_time);
-        static bool end_frame(float delta_time);
+        static bool begin_frame(RenderPacket* packet);
+        static bool end_frame(RenderPacket* packet);
 
         static std::unique_ptr<RenderBackend> s_backend;
     };
