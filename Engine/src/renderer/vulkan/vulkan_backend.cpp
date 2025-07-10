@@ -127,6 +127,10 @@ namespace Sparkle {
         vkWaitForFences(device, 1, &in_flight_fence, VK_TRUE, UINT64_MAX);
         vkResetFences(device, 1, &in_flight_fence);
 
+        // 2. Set clear color for this frame
+        const float* cc = packet->clearColor;
+        m_swapchain.set_clear_color(cc[0], cc[1], cc[2], cc[3]);
+
         // Acquire next image from the swapchain
         VkResult result = vkAcquireNextImageKHR(
             device,
@@ -146,6 +150,8 @@ namespace Sparkle {
             printf("\b%d\n", result);
             return false;
         }
+
+        m_swapchain.record_single(m_current_image_index);
 
         return true;
     }

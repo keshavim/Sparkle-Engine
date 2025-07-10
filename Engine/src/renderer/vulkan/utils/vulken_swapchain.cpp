@@ -125,25 +125,93 @@ VkResult VulkanSwapchain::create(VulkanDevice& device, VkSurfaceKHR surface, uin
     }
 
     // 12. Record command buffers (render pass begin/end with clear values)
-    set_clear_color(1.0f, 1.f, 0.f, 0.f);
-
+     record_all();
     return VK_SUCCESS;
 }
 
+void VulkanSwapchain::record_all() {
+    auto command_buffers = m_command_pool.get_buffers();
+    auto render_pass = m_render_pass.get();
+    auto framebuffers = m_framebuffers.get_all();
+    VkExtent2D extent = m_extent;
+    VkClearValue &clear_color = m_clear_color;
+    VkClearValue &clear_depth = m_clear_depth;
+
+    for (size_t i = 0; i < command_buffers.size(); ++i) {
+
+
+        VkCommandBuffer cmd = command_buffers[i];
+
+        vkResetCommandBuffer(cmd, 0);
+
+        // Begin command buffer
+        VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+        vkBeginCommandBuffer(cmd, &begin_info);
+
+        // Set clear values
+        VkClearValue clears[2] = { clear_color, clear_depth };
+
+        VkRenderPassBeginInfo rp_info = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+        rp_info.renderPass = render_pass;
+        rp_info.framebuffer = framebuffers[i];
+        rp_info.renderArea.offset = { 0, 0 };
+        rp_info.renderArea.extent = extent;
+        rp_info.clearValueCount = 2;
+        rp_info.pClearValues = clears;
+
+        // Begin render pass
+        vkCmdBeginRenderPass(cmd, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
+
+        // (This is where future drawing will go)
+
+        // End render pass
+        vkCmdEndRenderPass(cmd);
+
+        // End command buffer
+        VkResult res = vkEndCommandBuffer(cmd);
+        if (res != VK_SUCCESS) {
+            std::cerr << "Failed to record command buffer #" << i << "\n";
+        }
+    }
+}
+void VulkanSwapchain::record_single(uint32_t image_index) {
+    VkCommandBuffer cmd = m_command_pool.get_buffers()[image_index];
+    VkRenderPass render_pass = m_render_pass.get();
+    VkFramebuffer framebuffer = m_framebuffers.get_all()[image_index];
+    VkExtent2D extent = m_extent;
+
+    // ✅ Reset only the command buffer we're about to re-record
+    vkResetCommandBuffer(cmd, 0);
+
+    VkCommandBufferBeginInfo begin_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    vkBeginCommandBuffer(cmd, &begin_info);
+
+    VkClearValue clears[2] = { m_clear_color, m_clear_depth };
+
+    VkRenderPassBeginInfo rp_info = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+    rp_info.renderPass = render_pass;
+    rp_info.framebuffer = framebuffer;
+    rp_info.renderArea.offset = { 0, 0 };
+    rp_info.renderArea.extent = extent;
+    rp_info.clearValueCount = 2;
+    rp_info.pClearValues = clears;
+
+    vkCmdBeginRenderPass(cmd, &rp_info, VK_SUBPASS_CONTENTS_INLINE);
+
+    // TODO: draw commands later
+
+    vkCmdEndRenderPass(cmd);
+    vkEndCommandBuffer(cmd);
+}
+
+
 void VulkanSwapchain::set_clear_color(float r, float g, float b, float a) {
-    VkClearValue clear_color{};
-    clear_color.color = { {r,g,b,a} };
-
-    VkClearValue clear_depth{};
-    clear_depth.depthStencil = {1.0f, 0};
-
-    m_recorder.record_all(m_command_pool.get_buffers(),
-                          m_render_pass.get(),
-                          m_framebuffers.get_all(),
-                          m_extent,
-                          clear_color,
-                          clear_depth);
-
+    m_clear_color.color.float32[0] = r;
+    m_clear_color.color.float32[1] = g;
+    m_clear_color.color.float32[2] = b;
+    m_clear_color.color.float32[3] = a;
 }
 
 void VulkanSwapchain::recreate(VulkanDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height) {

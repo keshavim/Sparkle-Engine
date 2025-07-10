@@ -22,7 +22,7 @@ namespace Sparkle {
         bool begin_frame(const RenderPacket* packet) override;
         bool end_frame(const RenderPacket* packet) override;
 
-        void set_clear_color(const RenderPacket* packet) {
+        void set_clear_color(const RenderPacket* packet) override {
             const float* cc = packet->clearColor;
             m_swapchain.set_clear_color(cc[0], cc[1], cc[2], cc[3]);
         }

@@ -154,23 +154,6 @@ private:
 };
 
 
-// Records simple render pass commands into command buffers
-class VulkanCommandRecorder {
-public:
-    VulkanCommandRecorder() = default;
-
-    // Record commands for each framebuffer
-    void record_all(const std::vector<VkCommandBuffer>& command_buffers,
-                    VkRenderPass render_pass,
-                    const std::vector<VkFramebuffer>& framebuffers,
-                    VkExtent2D extent,
-                    VkClearValue clear_color,
-                    VkClearValue clear_depth);
-};
-
-
-
-
 class VulkanSwapchain {
 public:
     VulkanSwapchain() = default;
@@ -181,6 +164,9 @@ public:
 
     // Recreate swapchain on resize or other changes
     void recreate(VulkanDevice& device, VkSurfaceKHR surface, uint32_t width, uint32_t height);
+
+    void record_all();
+    void record_single(uint32_t image_index);
 
     // Cleanup all Vulkan resources related to swapchain
     void cleanup(VkDevice device);
@@ -209,12 +195,14 @@ private:
     VkExtent2D m_extent = {};
 
     std::vector<VkImage> m_images;
+    VkClearValue m_clear_color{};
+    VkClearValue m_clear_depth{1.0f, 0.0f};
+
 
     VulkanImageViews m_image_views;
     VulkanRenderPass m_render_pass;
     VulkanFramebufferManager m_framebuffers;
     VulkanCommandPool m_command_pool;
-    VulkanCommandRecorder m_recorder;
 };
 
 class VulkanSyncObjects {

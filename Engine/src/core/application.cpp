@@ -82,8 +82,6 @@ namespace Sparkle {
                 }
 
                 packet.deltaTime = dt;
-                Renderer::get_backend()->set_clear_color(&packet);
-
 
                 if (Renderer::draw_frame(&packet)) {
                     if (!m_game_inst->render()) {
